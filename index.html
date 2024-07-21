@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Player || Audio Waves API</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        .player {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            width: 500px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .player:hover {
+            transform: translateY(-10px);
+        }
+        .player img {
+            width: 100%;
+            margin-bottom: 50px;
+            border-radius: 15px;
+            max-height: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .player h2 {
+            font-size: 26px;
+            margin: 20px 0 10px;
+            color: #ff7e5f;
+        }
+        .player p {
+            margin: 5px 0;
+            color: #777;
+        }
+        .player audio {
+            width: 100%;
+            margin: 15px 0;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+        .controls button {
+            background: #ff7e5f;
+            border: none;
+            color: #fff;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.3s;
+            font-size: 16px;
+        }
+        .controls button:hover {
+            background: #feb47b;
+            transform: scale(1.1);
+        }
+        .progress-container {
+            width: 100%;
+            background: #f3f3f3;
+            border-radius: 5px;
+            overflow: hidden;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .progress {
+            width: 0;
+            height: 20px;
+            background: #ff7e5f;
+            transition: width 0.2s;
+        }
+        #audioName{
+          animation: 10s scroll linear infinite;
+          margin-top: 20px;
+        }
+        @keyframes scroll {
+          from {
+            transform: translateX(100%);
+          }
+          to {
+            transform: translateX(-150%);
+          }
+        }
+    </style>
+</head>
+<body>
+    <div class="player">
+        <img id="userImage" src="placeholder.jpg" alt="User Image">
+        <h2 id="audioName">Track Title</h2>
+        <p id="userName">User: <span>Unknown</span></p>
+        <p id="countPlays">Plays: <span>0</span></p>
+        <audio id="audio"></audio>
+        <div class="progress-container" id="progress-container">
+            <div class="progress" id="progress"></div>
+        </div>
+        <div class="controls">
+            <button id="prev"><i class="fas fa-backward"></i></button>
+            <button id="play"><i class="fas fa-play"></i></button>
+            <button id="next"><i class="fas fa-forward"></i></button>
+        </div>
+    </div>
+
+    <script>
+        const audio = document.getElementById('audio');
+        const playBtn = document.getElementById('play');
+        const prevBtn = document.getElementById('prev');
+        const nextBtn = document.getElementById('next');
+        const progressContainer = document.getElementById('progress-container');
+        const progress = document.getElementById('progress');
+        const audioName = document.getElementById('audioName');
+        const userName = document.getElementById('userName').querySelector('span');
+        const userImage = document.getElementById('userImage');
+        const countPlays = document.getElementById('countPlays').querySelector('span');
+
+        let songs = [];
+        let songIndex = 0;
+
+        async function fetchSongs() {
+            try {
+                const response = await fetch('https://audio-waves-api-js.vercel.app/audios/api');
+                const data = await response.json();
+                songs = data;
+                loadSong(songs[songIndex]);
+            } catch (error) {
+                console.error('Error fetching songs:', error);
+            }
+        }
+
+        function loadSong(song) {
+            audioName.innerText = song.name || song.orginal;
+            audio.src = song.url;
+            userName.innerText = song.userName;
+            userImage.src = song.userImage || 'https://audio-waves.vercel.app/logo.png';
+            countPlays.innerText = song.countPlays || '0';
+        }
+
+        function playSong() {
+            playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            audio.play();
+        }
+
+        function pauseSong() {
+            playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            audio.pause();
+        }
+
+        playBtn.addEventListener('click', () => {
+            const isPlaying = playBtn.innerHTML.includes('fa-pause');
+            if (isPlaying) {
+                pauseSong();
+            } else {
+                playSong();
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            songIndex = (songIndex - 1 + songs.length) % songs.length;
+            loadSong(songs[songIndex]);
+            playSong();
+        });
+
+        nextBtn.addEventListener('click', () => {
+            songIndex = (songIndex + 1) % songs.length;
+            loadSong(songs[songIndex]);
+            playSong();
+        });
+
+        audio.addEventListener('timeupdate', updateProgress);
+        progressContainer.addEventListener('click', setProgress);
+
+        function updateProgress(e) {
+            const { duration, currentTime } = e.srcElement;
+            const progressPercent = (currentTime / duration) * 100;
+            progress.style.width = `${progressPercent}%`;
+        }
+
+        function setProgress(e) {
+            const width = this.clientWidth;
+            const clickX = e.offsetX;
+            const duration = audio.duration;
+            audio.currentTime = (clickX / width) * duration;
+        }
+
+        fetchSongs();
+    </script>
+</body>
+</html>
